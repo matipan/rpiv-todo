@@ -7,6 +7,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- Testability exports: `__resetState()` resets module-level `tasks` + `nextId` to their initial state; `getNextId()` exposes the current id counter alongside existing `getTodos()`. Follows the sibling reset convention (`invalidateSkillIndex`, `clearInjectionState`) used elsewhere in the monorepo. Production behaviour unchanged.
+- Canonical reducer + replay test suites (`todo.reducer.test.ts`, `todo.replay.test.ts`) validating the full Vitest harness shape for downstream packages to follow.
+
 ## [0.9.1] - 2026-04-20
 
 ## [0.9.0] - 2026-04-19
