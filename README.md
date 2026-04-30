@@ -3,9 +3,17 @@
 [![npm version](https://img.shields.io/npm/v/@juicesharp/rpiv-todo.svg)](https://www.npmjs.com/package/@juicesharp/rpiv-todo)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Track tasks across long Pi Agent sessions with Claude-Code parity. `rpiv-todo` adds the `todo` tool, `/todos` slash command, and a persistent TodoOverlay widget above the editor to [Pi Agent](https://github.com/badlogic/pi-mono) — tasks survive session compact and `/reload` via branch replay.
+Give the model a todo list it can keep across long sessions. `rpiv-todo` adds the `todo` tool, the `/todos` slash command, and a live overlay above the editor to [Pi Agent](https://github.com/badlogic/pi-mono) — tasks survive `/reload` and conversation compaction, so the model picks up where it left off.
 
 ![Todo overlay widget above the Pi editor](https://raw.githubusercontent.com/juicesharp/rpiv-mono/main/packages/rpiv-todo/docs/overlay.jpg)
+
+## Features
+
+- **Live overlay above the editor** — see the model's plan at all times; auto-hides when empty.
+- **Survives `/reload` and compaction** — tasks replay from the conversation branch, not disk.
+- **Status states** — pending, in_progress, completed, plus a deleted tombstone for audit.
+- **Dependency tracking** — `blockedBy` with cycle detection, so the model can sequence work.
+- **Smart truncation** — 12-line collapse threshold; completed tasks drop first, pending tasks stay visible last.
 
 ## Install
 
