@@ -7,6 +7,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+- Cover redesigned as a macOS-style terminal-window screenshot mimicking the real `Todos (2/7)` overlay.
+
 ## [1.0.13] - 2026-05-01
 
 ### Added
