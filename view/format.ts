@@ -1,23 +1,17 @@
 import type { Theme } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
+import { formatStatusLabel } from "../state/i18n-bridge.js";
 import { selectTaskSubjectById } from "../state/selectors.js";
 import type { TaskState } from "../state/state.js";
 import type { Task, TaskAction, TaskDetails, TaskMutationParams, TaskStatus } from "../tool/types.js";
 
-// ---------------------------------------------------------------------------
-// Status presentation tables — the single source of truth for label/glyph/color.
-// ---------------------------------------------------------------------------
+// Re-export so legacy import paths (todo.ts, tests) continue to resolve;
+// the canonical definition lives in the i18n bridge.
+export { formatStatusLabel };
 
-export function formatStatusLabel(status: TaskStatus): string {
-	switch (status) {
-		case "in_progress":
-			return "in progress";
-		case "deleted":
-			return "deleted";
-		default:
-			return status;
-	}
-}
+// ---------------------------------------------------------------------------
+// Status presentation tables — the single source of truth for glyph/color.
+// ---------------------------------------------------------------------------
 
 export const STATUS_GLYPH: Record<TaskStatus, string> = {
 	pending: "○",

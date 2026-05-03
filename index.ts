@@ -1,20 +1,58 @@
 /**
- * rpiv-todo — Pi extension
+ * rpiv-todo — Pi extension. Registers the `todo` tool, `/todos` slash
+ * command, and the persistent TodoOverlay widget.
  *
- * Registers the `todo` tool, `/todos` slash command, and the five lifecycle
- * hooks that manage branch-replay state reconstruction and the TodoOverlay
- * persistent widget.
+ * TUI chrome strings localize at render time via the i18n bridge. Strings are
+ * registered with rpiv-i18n here, once, at module init.
+ *
+ * Adding a locale: drop `locales/<code>.json` next to en.json (mirroring the
+ * key set), then add the load + entry to the `registerStrings` call below.
+ * See `@juicesharp/rpiv-i18n` README → "Contributing translations" for the
+ * full convention.
  *
  * Extracted from rpiv-pi@7525a5d. Tool name "todo" and widget key
  * "rpiv-todos" preserved verbatim so existing session history replays
  * correctly after upgrade.
  */
 
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { registerStrings, type TranslationMap } from "@juicesharp/rpiv-i18n";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import { I18N_NAMESPACE } from "./state/i18n-bridge.js";
 import { replayFromBranch } from "./state/replay.js";
 import { replaceState } from "./state/store.js";
 import { registerTodosCommand, registerTodoTool, TOOL_NAME } from "./todo.js";
 import { TodoOverlay } from "./todo-overlay.js";
+
+function loadLocale(code: string): TranslationMap {
+	// A missing or malformed locale file degrades gracefully: registerStrings
+	// records an empty map for the locale, so render-time `t(key, fallback)`
+	// returns the canonical English literal at the call site. Crashing here
+	// would take the entire todo extension offline at module init —
+	// publish-manifest miss would brick the extension.
+	try {
+		return JSON.parse(
+			readFileSync(fileURLToPath(new URL(`./locales/${code}.json`, import.meta.url)), "utf-8"),
+		) as TranslationMap;
+	} catch (err) {
+		console.warn(
+			`rpiv-todo: failed to load locales/${code}.json — falling back to English (${(err as Error).message})`,
+		);
+		return {};
+	}
+}
+
+registerStrings(I18N_NAMESPACE, {
+	de: loadLocale("de"),
+	en: loadLocale("en"),
+	es: loadLocale("es"),
+	fr: loadLocale("fr"),
+	pt: loadLocale("pt"),
+	"pt-BR": loadLocale("pt-BR"),
+	ru: loadLocale("ru"),
+	uk: loadLocale("uk"),
+});
 
 export default function (pi: ExtensionAPI) {
 	// Todo overlay widget — constructed lazily at the first session_start with UI.

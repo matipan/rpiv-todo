@@ -31,6 +31,16 @@ pi install npm:@juicesharp/rpiv-todo
 
 Then restart your Pi session.
 
+### Optional: language picker + `--locale` flag
+
+The overlay and `/todos` command auto-detect your UI locale from `LANG` / `LC_ALL` and fall back to English; with that alone, a user whose shell is set to e.g. `pt_BR.UTF-8` already sees Portuguese without any extra step. To **change locale interactively** (`/languages` slash command) or **pin one at startup** (`pi --locale uk`), also install the SDK that owns those surfaces:
+
+```bash
+pi install npm:@juicesharp/rpiv-i18n
+```
+
+Without it, locale detection still works via `~/.config/rpiv-i18n/locale.json` (hand-edit `{"locale":"uk"}` and restart) and your shell environment — only the picker and flag are missing. Users who installed via `pi install npm:@juicesharp/rpiv-pi` + `/rpiv-setup` get the SDK automatically.
+
 ## Tool
 
 - **`todo`** — create / update / list / get / delete / clear tasks. 4-state
@@ -47,6 +57,12 @@ Then restart your Pi session.
 The aboveEditor widget auto-renders whenever any non-deleted tasks exist.
 12-line collapse threshold; completed tasks drop first on overflow, pending
 tasks truncate last. Auto-hides when the list is empty.
+
+## Localization
+
+`rpiv-todo` localizes its TUI chrome (overlay heading, `/todos` section headers, status words) through `@juicesharp/rpiv-i18n`. Bundled locales: `de`, `en`, `es`, `fr`, `pt`, `pt-BR`, `ru`, `uk`. LLM-facing output (tool response envelope, reducer errors, schema descriptions) stays English by design.
+
+Set the active locale via the `--locale` CLI flag, the `~/.config/rpiv-i18n/locale.json` config, or the `LANG`/`LC_ALL` environment variables. To contribute or override translations, see the `@juicesharp/rpiv-i18n` README "Contributing translations" section.
 
 ## License
 

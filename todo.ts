@@ -13,6 +13,7 @@
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import { formatStatusLabel, t } from "./state/i18n-bridge.js";
 import { replayFromBranch } from "./state/replay.js";
 import { selectTasksByStatus, selectTodoCounts, selectVisibleTasks } from "./state/selectors.js";
 import { applyTaskMutation } from "./state/state-reducer.js";
@@ -27,7 +28,13 @@ import {
 	TOOL_NAME,
 	TodoParamsSchema,
 } from "./tool/types.js";
-import { formatCommandTaskLine, formatStatusLabel, renderTodoCall, renderTodoResult } from "./view/format.js";
+import { formatCommandTaskLine, renderTodoCall, renderTodoResult } from "./view/format.js";
+
+// English fallbacks for localized /todos section headers — the box-drawing
+// decoration is part of the localized string so translators can adjust spacing.
+const SECTION_PENDING = "── Pending ──";
+const SECTION_IN_PROGRESS = "── In Progress ──";
+const SECTION_COMPLETED = "── Completed ──";
 
 // ---------------------------------------------------------------------------
 // Public re-exports — pre-refactor consumers (overlay, tests, index.ts) keep
@@ -97,35 +104,35 @@ export function registerTodosCommand(pi: ExtensionAPI): void {
 		description: "Show all todos on the current branch, grouped by status",
 		handler: async (_args, ctx) => {
 			if (!ctx.hasUI) {
-				ctx.ui.notify(ERR_REQUIRES_INTERACTIVE, "error");
+				ctx.ui.notify(t("command.requires_interactive", ERR_REQUIRES_INTERACTIVE), "error");
 				return;
 			}
 			const state = getState();
 			const visible = selectVisibleTasks(state);
 			if (visible.length === 0) {
-				ctx.ui.notify(MSG_NO_TODOS, "info");
+				ctx.ui.notify(t("command.no_todos", MSG_NO_TODOS), "info");
 				return;
 			}
 			const groups = selectTasksByStatus(state);
 			const counts = selectTodoCounts(state);
 
 			const header: string[] = [];
-			if (counts.completed > 0) header.push(`${counts.completed}/${counts.total} completed`);
+			if (counts.completed > 0) header.push(`${counts.completed}/${counts.total} ${formatStatusLabel("completed")}`);
 			if (counts.inProgress > 0) header.push(`${counts.inProgress} ${formatStatusLabel("in_progress")}`);
-			if (counts.pending > 0) header.push(`${counts.pending} pending`);
+			if (counts.pending > 0) header.push(`${counts.pending} ${formatStatusLabel("pending")}`);
 
 			const lines: string[] = [header.join(" · ")];
 			if (groups.pending.length > 0) {
-				lines.push("── Pending ──");
-				for (const t of groups.pending) lines.push(formatCommandTaskLine(t, "○"));
+				lines.push(t("command.section.pending", SECTION_PENDING));
+				for (const task of groups.pending) lines.push(formatCommandTaskLine(task, "○"));
 			}
 			if (groups.inProgress.length > 0) {
-				lines.push("── In Progress ──");
-				for (const t of groups.inProgress) lines.push(formatCommandTaskLine(t, "◐"));
+				lines.push(t("command.section.in_progress", SECTION_IN_PROGRESS));
+				for (const task of groups.inProgress) lines.push(formatCommandTaskLine(task, "◐"));
 			}
 			if (groups.completed.length > 0) {
-				lines.push("── Completed ──");
-				for (const t of groups.completed) lines.push(formatCommandTaskLine(t, "✓"));
+				lines.push(t("command.section.completed", SECTION_COMPLETED));
+				for (const task of groups.completed) lines.push(formatCommandTaskLine(task, "✓"));
 			}
 
 			ctx.ui.notify(lines.join("\n"), "info");

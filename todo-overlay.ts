@@ -11,6 +11,7 @@
 
 import type { ExtensionUIContext, Theme } from "@mariozechner/pi-coding-agent";
 import { type TUI, truncateToWidth } from "@mariozechner/pi-tui";
+import { formatStatusLabel, t } from "./state/i18n-bridge.js";
 import {
 	selectHasActive,
 	selectOverlayLayout,
@@ -23,6 +24,10 @@ import { formatOverlayTaskLine } from "./view/format.js";
 
 const WIDGET_KEY = "rpiv-todos";
 const MAX_WIDGET_LINES = 12;
+
+// English fallbacks for localized overlay chrome strings.
+const OVERLAY_HEADING = "Todos";
+const OVERLAY_MORE = "more";
 
 export class TodoOverlay {
 	private uiCtx: ExtensionUIContext | undefined;
@@ -86,13 +91,13 @@ export class TodoOverlay {
 
 		const headingColor = hasActive ? "accent" : "dim";
 		const headingIcon = hasActive ? "●" : "○";
-		const headingText = `Todos (${counts.completed}/${counts.total})`;
+		const headingText = `${t("overlay.heading", OVERLAY_HEADING)} (${counts.completed}/${counts.total})`;
 		const heading = truncate(`${theme.fg(headingColor, headingIcon)} ${theme.fg(headingColor, headingText)}`);
 
 		const lines: string[] = [heading];
 		const layout = selectOverlayLayout(snapshot, MAX_WIDGET_LINES - 1);
-		for (const t of layout.visible) {
-			lines.push(truncate(`${theme.fg("dim", "├─")} ${formatOverlayTaskLine(t, theme, showIds)}`));
+		for (const task of layout.visible) {
+			lines.push(truncate(`${theme.fg("dim", "├─")} ${formatOverlayTaskLine(task, theme, showIds)}`));
 		}
 
 		if (layout.hiddenCompleted === 0 && layout.truncatedTail === 0) {
@@ -103,10 +108,11 @@ export class TodoOverlay {
 
 		const totalHidden = layout.hiddenCompleted + layout.truncatedTail;
 		const overflowParts: string[] = [];
-		if (layout.hiddenCompleted > 0) overflowParts.push(`${layout.hiddenCompleted} completed`);
-		if (layout.truncatedTail > 0) overflowParts.push(`${layout.truncatedTail} pending`);
+		if (layout.hiddenCompleted > 0) overflowParts.push(`${layout.hiddenCompleted} ${formatStatusLabel("completed")}`);
+		if (layout.truncatedTail > 0) overflowParts.push(`${layout.truncatedTail} ${formatStatusLabel("pending")}`);
+		const more = t("overlay.more", OVERLAY_MORE);
 		const summary =
-			overflowParts.length > 0 ? `+${totalHidden} more (${overflowParts.join(", ")})` : `+${totalHidden} more`;
+			overflowParts.length > 0 ? `+${totalHidden} ${more} (${overflowParts.join(", ")})` : `+${totalHidden} ${more}`;
 		lines.push(truncate(`${theme.fg("dim", "└─")} ${theme.fg("dim", summary)}`));
 		return lines;
 	}

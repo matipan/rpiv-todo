@@ -7,6 +7,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- Localized TUI chrome (overlay heading, `/todos` section headers, status words) via `@juicesharp/rpiv-i18n`. 8 locales out of the box (de, en, es, fr, pt, pt-BR, ru, uk). LLM-facing strings (response envelope, reducer errors) stay English.
+
 ## [1.1.3] - 2026-05-03
 
 ## [1.1.2] - 2026-05-03

@@ -28,11 +28,13 @@
   },
   "files": [
     "index.ts",
+    "locales/",
     "todo.ts",
     "todo-overlay.ts",
     "LICENSE",
     "README.md",
     "state/invariants.ts",
+    "state/i18n-bridge.ts",
     "state/replay.ts",
     "state/selectors.ts",
     "state/state-reducer.ts",
@@ -49,6 +51,7 @@
     ]
   },
   "peerDependencies": {
+    "@juicesharp/rpiv-i18n": "*",
     "@mariozechner/pi-ai": "*",
     "@mariozechner/pi-coding-agent": "*",
     "@mariozechner/pi-tui": "*",
