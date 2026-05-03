@@ -5,7 +5,7 @@ All notable changes to `@juicesharp/rpiv-todo` are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.1.4] - 2026-05-03
 
 ### Added
 - Localized TUI chrome (overlay heading, `/todos` section headers, status words) via `@juicesharp/rpiv-i18n`. 8 locales out of the box (de, en, es, fr, pt, pt-BR, ru, uk). LLM-facing strings (response envelope, reducer errors) stay English.
