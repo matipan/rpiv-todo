@@ -48,6 +48,63 @@ With the SDK present, locale resolves from `--locale <code>` → `~/.config/rpiv
   Supports `blockedBy` dependency tracking with cycle detection. Tasks persist
   via branch replay — survive session compact and `/reload`.
 
+### Schema
+
+```ts
+todo({
+  action: "create" | "update" | "list" | "get" | "delete" | "clear",
+
+  // create-only
+  subject?: string,                // required for create
+  blockedBy?: number[],            // initial dependency ids
+
+  // create + update
+  description?: string,
+  activeForm?: string,             // present-continuous label shown while in_progress
+  owner?: string,
+  metadata?: Record<string, unknown>, // pass null per key to delete that key on update
+
+  // update-only
+  addBlockedBy?: number[],         // additive merge into blockedBy
+  removeBlockedBy?: number[],      // additive removal from blockedBy
+
+  // update / get / delete
+  id?: number,                     // task id
+
+  // update (target) or list (filter)
+  status?: "pending" | "in_progress" | "completed" | "deleted",
+
+  // list-only
+  includeDeleted?: boolean,        // default false — hides tombstones
+})
+```
+
+Valid status transitions: `pending ⇄ in_progress`, either → `completed`, any → `deleted` (terminal). `delete` keeps the task as a tombstone so historic `blockedBy` references still resolve.
+
+Returns:
+
+```ts
+{
+  content: [{ type: "text", text: string }], // human-readable summary of the op
+  details: {                                 // full snapshot — replay reads this back
+    action: TaskAction,
+    params: Record<string, unknown>,
+    tasks: Array<{
+      id: number,
+      subject: string,
+      description?: string,
+      activeForm?: string,
+      status: "pending" | "in_progress" | "completed" | "deleted",
+      blockedBy?: number[],
+      owner?: string,
+      metadata?: Record<string, unknown>,
+    }>,
+    nextId: number,
+    error?: string,                          // present only on validation/transition failures
+  }
+}
+```
+
 ## Commands
 
 - **`/todos`** — print the current todo list grouped by status.
