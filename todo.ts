@@ -12,7 +12,7 @@
  * continue to import from `./todo.js`.
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { formatStatusLabel, t } from "./state/i18n-bridge.js";
 import { replayFromBranch } from "./state/replay.js";
 import { selectTasksByStatus, selectTodoCounts, selectVisibleTasks } from "./state/selectors.js";
