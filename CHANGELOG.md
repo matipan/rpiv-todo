@@ -7,6 +7,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- Configurable LLM guidance overrides via package config.
+
 ## [1.5.1] - 2026-05-13
 
 ## [1.5.0] - 2026-05-12
