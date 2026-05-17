@@ -62,5 +62,8 @@
     "@juicesharp/rpiv-i18n": {
       "optional": true
     }
+  },
+  "dependencies": {
+    "@juicesharp/rpiv-config": "^1.8.0"
   }
 }
