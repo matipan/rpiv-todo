@@ -195,3 +195,92 @@ it("swallows a failed pre-warm, then retries on the first real update", async ()
 	expect(importer).toHaveBeenCalledTimes(2);
 	expect(overlayUpdate).toHaveBeenCalledTimes(1);
 });
+
+it("concurrent awaiters of one rejected import share a single retry", async () => {
+	const { makeTodoOverlayLoader } = await import("./index.js");
+	const healthyModule = { TodoOverlay: class {} } as unknown as typeof import("./todo-overlay.js");
+	let shouldFail = true;
+	const importer = vi.fn(async () => {
+		if (shouldFail) {
+			shouldFail = false;
+			throw new Error("shared load failure");
+		}
+		return healthyModule;
+	});
+	const load = makeTodoOverlayLoader(importer);
+
+	// Both callers join the same in-flight import and see the same rejection;
+	// only one underlying import ran, and only one retry runs afterwards.
+	const first = load();
+	const second = load();
+	await expect(first).rejects.toThrow("shared load failure");
+	await expect(second).rejects.toThrow("shared load failure");
+	expect(importer).toHaveBeenCalledTimes(1);
+
+	await expect(load()).resolves.toBe(healthyModule);
+	expect(importer).toHaveBeenCalledTimes(2);
+});
+
+it("tool_execution_end swallows a transient load failure and heals on the next event", async () => {
+	let shouldFail = true;
+	const overlayUpdate = vi.fn();
+	const healthyModule = {
+		TodoOverlay: class {
+			setUICtx(): void {}
+			resetCompletedDisplayState(): void {}
+			update(): void {
+				overlayUpdate();
+			}
+		},
+	} as unknown as typeof import("./todo-overlay.js");
+	const importer = vi.fn(async (): Promise<typeof import("./todo-overlay.js")> => {
+		if (shouldFail) {
+			shouldFail = false;
+			throw new Error("transient overlay load failure");
+		}
+		return healthyModule;
+	});
+	const lifecycle = await setup(importer);
+	const ctx = createMockCtx({ hasUI: true, sessionId: "fail-soft" });
+	await lifecycle.start({} as never, ctx as never);
+	await lifecycle.tool.execute?.(
+		"tc",
+		{ action: "create", subject: "fail-soft task" } as never,
+		undefined as never,
+		undefined as never,
+		ctx as never,
+	);
+
+	// The tool succeeded, so a failed widget refresh must not reject the handler
+	// (which would surface as an extension error) — it warns and moves on.
+	const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+	await expect(
+		lifecycle.toolEnd({ toolName: "todo", isError: false } as never, ctx as never),
+	).resolves.toBeUndefined();
+	expect(warn).toHaveBeenCalledTimes(1);
+	expect(warn.mock.calls[0]?.[0]).toContain("transient overlay load failure");
+	warn.mockRestore();
+	expect(overlayUpdate).not.toHaveBeenCalled();
+
+	await lifecycle.toolEnd({ toolName: "todo", isError: false } as never, ctx as never);
+	expect(importer).toHaveBeenCalledTimes(2);
+	expect(overlayUpdate).toHaveBeenCalledTimes(1);
+});
+
+it("tool_execution_end still propagates the latched stale-namespace restart error", async () => {
+	const staleModule = { TodoOverlay: undefined } as unknown as typeof import("./todo-overlay.js");
+	const lifecycle = await setup(async () => staleModule);
+	const ctx = createMockCtx({ hasUI: true, sessionId: "stale-latch" });
+	await lifecycle.start({} as never, ctx as never);
+	await lifecycle.tool.execute?.(
+		"tc",
+		{ action: "create", subject: "stale task" } as never,
+		undefined as never,
+		undefined as never,
+		ctx as never,
+	);
+
+	await expect(lifecycle.toolEnd({ toolName: "todo", isError: false } as never, ctx as never)).rejects.toThrow(
+		"module cache is stale; restart Pi",
+	);
+});

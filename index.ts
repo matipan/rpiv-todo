@@ -47,6 +47,18 @@ type TodoOverlayModule = typeof import("./todo-overlay.js");
 type TodoOverlayImporter = () => Promise<TodoOverlayModule>;
 
 /**
+ * Marker shared by the loader's poisoned-namespace error and the
+ * `isStaleOverlayModuleError` predicate that lets handlers re-throw it while
+ * swallowing transient load failures.
+ */
+const STALE_OVERLAY_MESSAGE = "Todo overlay module cache is stale; restart Pi";
+
+/** True for the loader's latched poisoned-namespace error (see below). */
+export function isStaleOverlayModuleError(e: unknown): boolean {
+	return String(e).includes(STALE_OVERLAY_MESSAGE);
+}
+
+/**
  * Memoize the overlay graph after a successful load, but drop a rejected
  * promise so a failed pre-warm does not permanently replay the same rejection.
  * The export guard turns jiti's poisoned-namespace failure into a useful restart
@@ -59,16 +71,23 @@ export function makeTodoOverlayLoader(
 
 	return async (): Promise<TodoOverlayModule> => {
 		memo ??= importOverlay();
+		const current = memo;
 		let mod: TodoOverlayModule;
 		try {
-			mod = await memo;
+			mod = await current;
 		} catch (error) {
-			memo = undefined;
+			// Clear only OUR rejected promise: a late catch from a concurrent
+			// awaiter must never clobber a fresh retry another caller installed.
+			if (memo === current) memo = undefined;
 			throw error;
 		}
 		if (typeof mod.TodoOverlay !== "function") {
+			// Deliberately latched: the memo keeps this resolved-but-poisoned
+			// namespace, so every subsequent load re-throws instead of retrying.
+			// Re-importing would hand back the same cached jiti namespace — a
+			// retry can never heal this; only the restart the error asks for can.
 			const keys = JSON.stringify(Object.keys(mod));
-			throw new Error(`Todo overlay module cache is stale; restart Pi (resolved namespace keys: ${keys})`);
+			throw new Error(`${STALE_OVERLAY_MESSAGE} (resolved namespace keys: ${keys})`);
 		}
 		return mod;
 	};
@@ -233,7 +252,17 @@ export default function (pi: ExtensionAPI, importOverlay: TodoOverlayImporter = 
 	// (branch is stale — message_end runs after tool_execution_end).
 	pi.on("tool_execution_end", async (event) => {
 		if (event.toolName !== TOOL_NAME || event.isError) return;
-		await updateTodoOverlay();
+		try {
+			await updateTodoOverlay();
+		} catch (e) {
+			// The tool itself succeeded — a transient overlay-load failure only
+			// costs this one refresh, and the loader's cleared memo lets the next
+			// update retry. Don't surface that as an extension error. The latched
+			// stale-namespace error still propagates: it never self-heals, and the
+			// user needs its restart guidance.
+			if (isStaleOverlayModuleError(e)) throw e;
+			console.warn(`[rpiv-todo] overlay refresh failed (will retry on next update): ${String(e)}`);
+		}
 	});
 
 	// Evaluate the lazy graph after startup while Pi's boot-time dependency paths
