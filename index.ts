@@ -40,6 +40,40 @@ type I18nLoader = {
 	registerLocalesFromDir: (namespace: string, packageUrl: string, options?: { label?: string }) => void;
 };
 
+/** Delay the overlay graph pre-warm until Pi's startup work has settled. */
+export const PREWARM_DELAY_MS = 2000;
+
+type TodoOverlayModule = typeof import("./todo-overlay.js");
+type TodoOverlayImporter = () => Promise<TodoOverlayModule>;
+
+/**
+ * Memoize the overlay graph after a successful load, but drop a rejected
+ * promise so a failed pre-warm does not permanently replay the same rejection.
+ * The export guard turns jiti's poisoned-namespace failure into a useful restart
+ * error instead of a bare "TodoOverlay is not a constructor" TypeError.
+ */
+export function makeTodoOverlayLoader(
+	importOverlay: TodoOverlayImporter = () => import("./todo-overlay.js"),
+): TodoOverlayImporter {
+	let memo: Promise<TodoOverlayModule> | undefined;
+
+	return async (): Promise<TodoOverlayModule> => {
+		memo ??= importOverlay();
+		let mod: TodoOverlayModule;
+		try {
+			mod = await memo;
+		} catch (error) {
+			memo = undefined;
+			throw error;
+		}
+		if (typeof mod.TodoOverlay !== "function") {
+			const keys = JSON.stringify(Object.keys(mod));
+			throw new Error(`Todo overlay module cache is stale; restart Pi (resolved namespace keys: ${keys})`);
+		}
+		return mod;
+	};
+}
+
 // Dynamic import keeps `@juicesharp/rpiv-i18n` a soft optional peer: when the
 // SDK is installed alongside this package the strings register and
 // `/languages` flips them live; when it isn't, the import rejects here, we
@@ -61,9 +95,9 @@ function isStaleCtxError(e: unknown): boolean {
 	return /stale after session replacement/.test(String(e));
 }
 
-export default function (pi: ExtensionAPI) {
+export default function (pi: ExtensionAPI, importOverlay: TodoOverlayImporter = () => import("./todo-overlay.js")) {
 	let todoOverlay: TodoOverlay | undefined;
-	let todoOverlayModule: Promise<typeof import("./todo-overlay.js")> | undefined;
+	const loadTodoOverlay = makeTodoOverlayLoader(importOverlay);
 	let uiCtx: ExtensionUIContext | undefined;
 	let lifecycleGeneration = 0;
 
@@ -74,8 +108,7 @@ export default function (pi: ExtensionAPI) {
 		const hasVisibleTasks = getRenderState().tasks.some((task) => task.status !== "deleted");
 		if (!uiCtx || (!todoOverlay && !hasVisibleTasks)) return;
 
-		todoOverlayModule ??= import("./todo-overlay.js");
-		const { TodoOverlay } = await todoOverlayModule;
+		const { TodoOverlay } = await loadTodoOverlay();
 		if (generation !== lifecycleGeneration || !uiCtx) return;
 
 		todoOverlay ??= new TodoOverlay();
@@ -202,6 +235,14 @@ export default function (pi: ExtensionAPI) {
 		if (event.toolName !== TOOL_NAME || event.isError) return;
 		await updateTodoOverlay();
 	});
+
+	// Evaluate the lazy graph after startup while Pi's boot-time dependency paths
+	// are still stable. This loads no widget and constructs no overlay; those stay
+	// deferred until a foreground session has visible tasks. A rejected pre-warm
+	// is intentionally swallowed after loadTodoOverlay clears its memo, allowing
+	// the first real update to retry. unref avoids holding an embedder open.
+	const prewarmTimer = setTimeout(() => void loadTodoOverlay().catch(() => undefined), PREWARM_DELAY_MS);
+	prewarmTimer.unref?.();
 
 	pi.on("agent_start", async () => {
 		todoOverlay?.hideCompletedTasksFromPreviousTurn();
