@@ -114,6 +114,17 @@ function isStaleCtxError(e: unknown): boolean {
 	return /stale after session replacement/.test(String(e));
 }
 
+/**
+ * Render a caught `unknown` as a human-readable message — the `instanceof Error`
+ * dance collapsed to one place. Local copy of the `formatError` in
+ * packages/rpiv-workflow/internal-utils.ts:56-58 (that module disclaims its
+ * public surface, so the cross-package import is not available). M2 boundary
+ * duplication: tracked as a documented-constant seam.
+ */
+function formatError(e: unknown): string {
+	return e instanceof Error ? e.message : String(e);
+}
+
 export default function (pi: ExtensionAPI, importOverlay: TodoOverlayImporter = () => import("./todo-overlay.js")) {
 	let todoOverlay: TodoOverlay | undefined;
 	const loadTodoOverlay = makeTodoOverlayLoader(importOverlay);
@@ -261,7 +272,7 @@ export default function (pi: ExtensionAPI, importOverlay: TodoOverlayImporter = 
 			// stale-namespace error still propagates: it never self-heals, and the
 			// user needs its restart guidance.
 			if (isStaleOverlayModuleError(e)) throw e;
-			console.warn(`[rpiv-todo] overlay refresh failed (will retry on next update): ${String(e)}`);
+			console.warn(`[rpiv-todo] overlay refresh failed (will retry on next update): ${formatError(e)}`);
 		}
 	});
 
