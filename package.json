@@ -1,6 +1,6 @@
 {
-	"name": "@juicesharp/rpiv-todo",
-	"version": "2.7.1",
+	"name": "@matipan/rpiv-todo",
+	"version": "2.7.1-galpon.1",
 	"description": "Pi extension. A todo list for the model, rendered as a live overlay that survives /reload and conversation compaction.",
 	"keywords": [
 		"pi-package",
@@ -13,18 +13,18 @@
 	"author": "juicesharp",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/juicesharp/rpiv-mono.git",
-		"directory": "packages/rpiv-todo"
+		"url": "git+https://github.com/matipan/rpiv-todo.git"
 	},
-	"homepage": "https://github.com/juicesharp/rpiv-mono/tree/main/packages/rpiv-todo#readme",
+	"homepage": "https://github.com/matipan/rpiv-todo#readme",
 	"bugs": {
-		"url": "https://github.com/juicesharp/rpiv-mono/issues"
+		"url": "https://github.com/matipan/rpiv-todo/issues"
 	},
 	"publishConfig": {
 		"access": "public"
 	},
 	"scripts": {
-		"test": "vitest run"
+		"test": "vitest run integrations/galpon.test.ts",
+		"typecheck": "tsc --noEmit"
 	},
 	"files": [
 		"config.ts",
@@ -46,6 +46,7 @@
 		"state/state.ts",
 		"state/store.ts",
 		"state/task-graph.ts",
+		"integrations/galpon.ts",
 		"tool/response-envelope.ts",
 		"tool/sanitize.ts",
 		"tool/types.ts",
@@ -69,7 +70,15 @@
 		}
 	},
 	"dependencies": {
-		"@juicesharp/rpiv-config": "^2.7.1",
 		"typebox": "^1.1.24"
+	},
+	"devDependencies": {
+		"@earendil-works/pi-ai": "0.84.3",
+		"@earendil-works/pi-coding-agent": "0.84.3",
+		"@earendil-works/pi-tui": "0.84.3",
+		"@juicesharp/rpiv-i18n": "2.7.1",
+		"@types/node": "^22.20.0",
+		"typescript": "^6.0.3",
+		"vitest": "^4.1.10"
 	}
 }

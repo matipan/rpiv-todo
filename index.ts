@@ -22,13 +22,16 @@
 import type { ExtensionAPI, ExtensionUIContext } from "@earendil-works/pi-coding-agent";
 import type { KeyId } from "@earendil-works/pi-tui";
 import { COLLAPSE_KEY_OFF, resolveCollapseKey } from "./config.js";
+import { registerGalponIntegration } from "./integrations/galpon.js";
 import { I18N_NAMESPACE } from "./state/i18n-bridge.js";
 import { replayFromBranch } from "./state/replay.js";
 import {
 	clearActiveRenderSession,
+	commitState,
 	evictSession,
 	getActiveRenderSession,
 	getRenderState,
+	getState,
 	replaceState,
 	setActiveRenderSession,
 	sid,
@@ -130,6 +133,7 @@ export default function (pi: ExtensionAPI, importOverlay: TodoOverlayImporter = 
 	const loadTodoOverlay = makeTodoOverlayLoader(importOverlay);
 	let uiCtx: ExtensionUIContext | undefined;
 	let lifecycleGeneration = 0;
+	let integrationSessionId = "";
 
 	async function updateTodoOverlay(
 		resetCompletedDisplayState = false,
@@ -149,6 +153,12 @@ export default function (pi: ExtensionAPI, importOverlay: TodoOverlayImporter = 
 
 	registerTodoTool(pi);
 	registerTodosCommand(pi);
+	const unregisterGalponIntegration = registerGalponIntegration(pi, {
+		currentSessionId: () => integrationSessionId,
+		getState,
+		commitState,
+		refresh: () => updateTodoOverlay(),
+	});
 
 	// Collapse/expand hotkey for the todo overlay. The key is resolved once at
 	// factory scope from config (register-once contract: a config change needs
@@ -204,6 +214,7 @@ export default function (pi: ExtensionAPI, importOverlay: TodoOverlayImporter = 
 			if (!isStaleCtxError(e)) throw e;
 			return;
 		}
+		integrationSessionId = id;
 		if (!ctx.hasUI) return;
 		// First UI-bearing session_start claims the foreground (the interactive
 		// launcher, by spawn-ordering) without eagerly loading the overlay.
@@ -225,6 +236,8 @@ export default function (pi: ExtensionAPI, importOverlay: TodoOverlayImporter = 
 	});
 
 	pi.on("session_shutdown", async (_event, ctx) => {
+		unregisterGalponIntegration();
+		integrationSessionId = "";
 		// Best-effort sid: disposal can race a stale ctx (like compact). An
 		// unknown/stale sid resolves to "" and is treated as foreground — the
 		// safe pre-isolation default that disposes as before.

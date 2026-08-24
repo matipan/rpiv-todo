@@ -1,3 +1,11 @@
+# Galpón rpiv-todo fork
+
+This repository is a standalone fork of `@juicesharp/rpiv-todo` 2.7.1. It keeps the upstream TODO tool, replay, and overlay behavior and adds a versioned Pi event-bus contract under `integrations/galpon.ts` so Galpón can reconcile explicitly linked TODOs when durable agent results settle.
+
+The production copy is vendored in the Galpón repository. This repository preserves the fork history and focused integration tests.
+
+Upstream: https://github.com/juicesharp/rpiv-mono/tree/main/packages/rpiv-todo
+
 # @juicesharp/rpiv-todo
 
 [![npm version](https://img.shields.io/npm/v/@juicesharp/rpiv-todo.svg)](https://www.npmjs.com/package/@juicesharp/rpiv-todo)

@@ -1,5 +1,46 @@
-import type { GuidanceFields } from "@juicesharp/rpiv-config";
-import { loadJsonConfigWithLegacyFallback, validateGuidanceFields } from "@juicesharp/rpiv-config";
+import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { isAbsolute, join } from "node:path";
+
+export interface GuidanceFields {
+	promptSnippet?: string;
+	promptGuidelines?: string[];
+	description?: string;
+}
+
+function configDirectory(): string {
+	const configured = process.env.XDG_CONFIG_HOME?.trim();
+	if (!configured) return join(homedir(), ".config");
+	const expanded = configured === "~" ? homedir() : configured.startsWith("~/") ? join(homedir(), configured.slice(2)) : configured;
+	return isAbsolute(expanded) ? expanded : join(homedir(), ".config");
+}
+
+function loadJsonConfigWithLegacyFallback<T>(name: string, file = "config.json"): T {
+	const primary = join(configDirectory(), name, file);
+	const legacy = join(homedir(), ".config", name, file);
+	const path = existsSync(primary) ? primary : legacy;
+	if (!existsSync(path)) return {} as T;
+	try {
+		const parsed = JSON.parse(readFileSync(path, "utf8")) as unknown;
+		return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as T) : ({} as T);
+	} catch {
+		return {} as T;
+	}
+}
+
+export function validateGuidanceFields(fields: unknown): GuidanceFields {
+	if (!fields || typeof fields !== "object") return {};
+	const input = fields as Record<string, unknown>;
+	const result: GuidanceFields = {};
+	if (typeof input.promptSnippet === "string" && input.promptSnippet.length > 0) result.promptSnippet = input.promptSnippet;
+	if (
+		Array.isArray(input.promptGuidelines) &&
+		input.promptGuidelines.length > 0 &&
+		input.promptGuidelines.every((value) => typeof value === "string" && value.length > 0)
+	) result.promptGuidelines = input.promptGuidelines as string[];
+	if (typeof input.description === "string" && input.description.length > 0) result.description = input.description;
+	return result;
+}
 
 interface TodoConfig {
 	guidance?: GuidanceFields;
@@ -98,4 +139,3 @@ export function resolveCollapseKey(): CollapseKeySpec {
 	return isValidCollapseKeySpec(raw) ? raw : DEFAULT_COLLAPSE_KEY;
 }
 
-export { validateGuidanceFields };
